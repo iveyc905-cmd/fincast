@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -16,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -41,6 +44,7 @@ import com.fincast.tv.ui.components.VSpace
 import com.fincast.tv.ui.theme.Scrim
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -73,6 +77,10 @@ fun SetupScreen(onDone: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
+    // Phones get a narrow gutter; a TV needs overscan-safe margins.
+    val compact = LocalConfiguration.current.screenWidthDp < 600
+    val gutter = if (compact) 16.dp else 48.dp
+
     fun addPlaylist() {
         busy = true
         message = null
@@ -95,8 +103,8 @@ fun SetupScreen(onDone: () -> Unit) {
             }
             busy = false
             result.fold(
-                onSuccess = {
-                    message = "Playlist added"
+                onSuccess = { count ->
+                    message = "Loaded $count channels"
                     name = ""; portal = ""; username = ""; password = ""; m3uUrl = ""
                     SyncScheduler.refreshNow(context)
                 },
@@ -109,8 +117,10 @@ fun SetupScreen(onDone: () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .systemBarsPadding()
+            .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 48.dp, vertical = 32.dp)
+            .padding(horizontal = gutter, vertical = if (compact) 16.dp else 32.dp)
     ) {
         Text("Playlists", style = MaterialTheme.typography.titleLarge)
         VSpace(20)
@@ -187,7 +197,7 @@ fun SetupScreen(onDone: () -> Unit) {
             onValueChange = { name = it },
             label = { Text("Name (optional)") },
             singleLine = true,
-            modifier = Modifier.width(640.dp),
+            modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
         )
         VSpace(12)
 
@@ -199,7 +209,7 @@ fun SetupScreen(onDone: () -> Unit) {
                     label = { Text("Portal URL, e.g. http://example.com:8080") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.width(640.dp),
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
                 )
                 VSpace(12)
                 OutlinedTextField(
@@ -207,7 +217,7 @@ fun SetupScreen(onDone: () -> Unit) {
                     onValueChange = { username = it },
                     label = { Text("Username") },
                     singleLine = true,
-                    modifier = Modifier.width(640.dp),
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
                 )
                 VSpace(12)
                 OutlinedTextField(
@@ -217,7 +227,7 @@ fun SetupScreen(onDone: () -> Unit) {
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    modifier = Modifier.width(640.dp),
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
                 )
             }
 
@@ -231,7 +241,7 @@ fun SetupScreen(onDone: () -> Unit) {
                         keyboardType = KeyboardType.Uri,
                         imeAction = ImeAction.Done,
                     ),
-                    modifier = Modifier.width(640.dp),
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
                 )
             }
         }
@@ -293,7 +303,7 @@ fun SetupScreen(onDone: () -> Unit) {
             keyboardActions = KeyboardActions(
                 onDone = { scope.launch { Graph.settings.setUserAgent(userAgentDraft) } }
             ),
-            modifier = Modifier.width(640.dp),
+            modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
         )
         TextButton(
             onClick = { scope.launch { Graph.settings.setUserAgent(userAgentDraft) } },
@@ -312,13 +322,20 @@ fun SetupScreen(onDone: () -> Unit) {
         }
 
         VSpace(28)
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { SyncScheduler.refreshNow(context) }) {
-                Text("Refresh everything now")
-            }
-            Button(onClick = onDone, enabled = playlists.isNotEmpty()) {
-                Text("Start watching")
-            }
+        // Stacked, so both fit on a phone.
+        Column(
+            Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Button(
+                onClick = onDone,
+                enabled = playlists.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Start watching") }
+            OutlinedButton(
+                onClick = { SyncScheduler.refreshNow(context) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Refresh everything now") }
         }
         VSpace(24)
     }
@@ -328,7 +345,8 @@ fun SetupScreen(onDone: () -> Unit) {
 private fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier
-            .width(760.dp)
+            .widthIn(max = 760.dp)
+            .fillMaxWidth()
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

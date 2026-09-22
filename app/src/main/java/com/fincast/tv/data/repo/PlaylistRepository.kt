@@ -52,7 +52,8 @@ class PlaylistRepository(
         settings.setLastChannel(channelId)
     }
 
-    suspend fun addM3uUrl(name: String, url: String, userAgent: String?): Long {
+    /** @return the number of channels loaded; throws if the playlist could not be loaded. */
+    suspend fun addM3uUrl(name: String, url: String, userAgent: String?): Int {
         val playlist = PlaylistEntity(
             name = name.ifBlank { Uri.parse(url).host ?: "Playlist" },
             kind = SourceKind.M3U_URL,
@@ -60,8 +61,7 @@ class PlaylistRepository(
             userAgent = userAgent,
         )
         val id = db.playlists().insert(playlist)
-        refresh(id)
-        return id
+        return loadNew(id)
     }
 
     suspend fun addXtream(
@@ -70,7 +70,7 @@ class PlaylistRepository(
         username: String,
         password: String,
         userAgent: String?,
-    ): Long {
+    ): Int {
         // Verify before persisting, so a typo surfaces as an error on the setup
         // screen rather than as an empty playlist later.
         val client = XtreamClient(context, portalUrl, username, password, userAgent)
@@ -86,9 +86,18 @@ class PlaylistRepository(
             userAgent = userAgent,
         )
         val id = db.playlists().insert(playlist)
-        refresh(id)
-        return id
+        return loadNew(id)
     }
+
+    /**
+     * The playlist row is kept even when its first load fails, so a provider
+     * that is briefly down does not mean re-typing the login; the error still
+     * surfaces so the setup screen can say what went wrong.
+     */
+    private suspend fun loadNew(playlistId: Long): Int =
+        refresh(playlistId).getOrElse { error ->
+            throw IOException("Saved, but loading the channels failed: ${error.message}", error)
+        }
 
     suspend fun delete(playlistId: Long) = db.playlists().delete(playlistId)
 

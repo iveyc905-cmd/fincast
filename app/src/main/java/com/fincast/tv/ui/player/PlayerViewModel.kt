@@ -164,6 +164,10 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         local.value = local.value.copy(statusMessage = message, isBuffering = false)
     }
 
+    fun clearStatus() {
+        local.value = local.value.copy(statusMessage = null)
+    }
+
     fun cycleAspect() {
         val next = AspectMode.entries[(local.value.aspectMode.ordinal + 1) % AspectMode.entries.size]
         local.value = local.value.copy(aspectMode = next, statusMessage = next.name)

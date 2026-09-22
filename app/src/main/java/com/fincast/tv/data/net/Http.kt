@@ -47,7 +47,9 @@ object Http {
 
         client(context).newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IOException("HTTP ${response.code} for $url")
+                // Drop the query string: for Xtream it carries the password, and this
+                // message ends up on screen.
+                throw IOException("HTTP ${response.code} from ${url.substringBefore('?')}")
             }
             val body = response.body ?: throw IOException("Empty body for $url")
             return block(body.byteStream())

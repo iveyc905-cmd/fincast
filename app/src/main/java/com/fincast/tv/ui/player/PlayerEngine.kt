@@ -24,6 +24,8 @@ data class TrackOption(
     val trackIndex: Int,
     val label: String,
     val isSelected: Boolean,
+    /** C.TRACK_TYPE_AUDIO or C.TRACK_TYPE_TEXT. */
+    val type: Int,
 )
 
 /**
@@ -132,7 +134,7 @@ class PlayerEngine(private val context: Context) {
                         append(" · ").append(format.channelCount).append("ch")
                     }
                 }
-                options += TrackOption(groupIndex, i, label, group.isTrackSelected(i))
+                options += TrackOption(groupIndex, i, label, group.isTrackSelected(i), type)
             }
         }
         return options
@@ -143,6 +145,8 @@ class PlayerEngine(private val context: Context) {
         val group = tracks.groups.getOrNull(option.groupIndex) ?: return
         trackSelector?.let { selector ->
             selector.parameters = selector.buildUponParameters()
+                // Re-enable the type in case subtitles were switched off earlier.
+                .setTrackTypeDisabled(option.type, false)
                 .setOverrideForType(
                     TrackSelectionOverride(group.mediaTrackGroup, listOf(option.trackIndex))
                 )

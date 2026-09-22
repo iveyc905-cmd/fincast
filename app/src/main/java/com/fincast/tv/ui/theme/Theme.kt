@@ -36,8 +36,8 @@ object Scrim {
     val bar = Color(0xCC05070A)
 }
 
-private val FincastTypography = Typography(
-    // TV viewing distance: everything a notch larger than the phone defaults.
+/** Ten-foot sizes: read from a sofa across the room. */
+private val TvTypography = Typography(
     titleLarge = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium),
     bodyLarge = TextStyle(fontSize = 18.sp),
@@ -46,12 +46,22 @@ private val FincastTypography = Typography(
     labelMedium = TextStyle(fontSize = 13.sp),
 )
 
+/** Hand-held sizes: a phone is a foot away, and screen height is scarce. */
+private val TouchTypography = Typography(
+    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Medium),
+    bodyLarge = TextStyle(fontSize = 15.sp),
+    bodyMedium = TextStyle(fontSize = 14.sp),
+    labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
+    labelMedium = TextStyle(fontSize = 12.sp),
+)
+
 @Composable
-fun FincastTheme(content: @Composable () -> Unit) {
+fun FincastTheme(tv: Boolean, content: @Composable () -> Unit) {
     // The app is dark-only on purpose; a light UI over live video is unusable.
     MaterialTheme(
         colorScheme = FincastColors,
-        typography = FincastTypography,
+        typography = if (tv) TvTypography else TouchTypography,
         content = content,
     )
 }

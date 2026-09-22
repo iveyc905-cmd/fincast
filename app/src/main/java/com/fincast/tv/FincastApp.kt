@@ -7,10 +7,12 @@ import com.fincast.tv.data.repo.EpgRepository
 import com.fincast.tv.data.repo.PlaylistRepository
 import com.fincast.tv.data.repo.SettingsRepository
 import com.fincast.tv.sync.SyncScheduler
+import com.fincast.tv.util.CrashLog
 
 class FincastApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         Graph.init(this)
         SyncScheduler.schedulePeriodic(this)
     }
