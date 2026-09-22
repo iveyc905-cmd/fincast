@@ -1,0 +1,22 @@
+# Gradle / Android build output
+.gradle/
+build/
+app/build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Android Studio
+.idea/
+*.iml
+.kotlin/
+
+# Signing keys never belong in the repo
+*.jks
+*.keystore
+keystore.properties
+
+# OS noise
+.DS_Store
+Thumbs.db

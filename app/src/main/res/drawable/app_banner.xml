@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android TV requires a 320x180 banner for the launcher row. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#05070A"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#4DA3FF"
+        android:pathData="M96,58h128a10,10 0,0 1,10 10v56a10,10 0,0 1,-10 10h-128a10,10 0,0 1,-10 -10v-56a10,10 0,0 1,10 -10z" />
+    <path
+        android:fillColor="#05070A"
+        android:pathData="M146,80l40,22 -40,22z" />
+    <path
+        android:fillColor="#4DA3FF"
+        android:pathData="M126,40l34,18 34,-18 8,10 -42,22 -42,-22z" />
+</vector>
