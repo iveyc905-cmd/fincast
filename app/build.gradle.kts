@@ -13,8 +13,8 @@ android {
         applicationId = "com.fincast.tv"
         minSdk = 21
         targetSdk = 34          // 34 keeps foreground-service rules simpler on TV
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
@@ -78,6 +78,7 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.palette)
     implementation(libs.work.runtime.ktx)
     implementation(libs.datastore.preferences)
 

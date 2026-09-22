@@ -40,6 +40,9 @@ class PlaylistRepository(
         now = now,
     )
 
+    fun observeRecent(playlistId: Long, limit: Int = 20, now: Long = System.currentTimeMillis()) =
+        db.channels().observeRecent(playlistId, now, limit)
+
     suspend fun channel(id: Long): ChannelEntity? = db.channels().byId(id)
 
     suspend fun channelByNumber(playlistId: Long, number: Int): ChannelEntity? =

@@ -1,6 +1,7 @@
 package com.fincast.tv
 
 import android.graphics.Color as AndroidColor
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -34,11 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fincast.tv.ui.components.VSpace
-import com.fincast.tv.ui.mobile.MobilePlayerScreen
+import com.fincast.tv.ui.mobile.MobileApp
 import com.fincast.tv.ui.player.TvPlayerScreen
 import com.fincast.tv.ui.setup.SetupScreen
 import com.fincast.tv.ui.theme.FincastTheme
 import com.fincast.tv.util.CrashLog
+import com.fincast.tv.util.Pip
 import com.fincast.tv.util.isTelevision
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +68,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // Android 8-11 need a nudge to shrink into picture-in-picture on Home.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        Pip.enterIfWanted(this)
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        Pip.inPip = isInPictureInPictureMode
     }
 }
 
@@ -97,7 +110,7 @@ private fun FincastRoot(tv: Boolean) {
         Screen.PLAYER -> {
             val openSettings = { screen = Screen.SETUP }
             if (tv) TvPlayerScreen(onOpenSettings = openSettings)
-            else MobilePlayerScreen(onOpenSettings = openSettings)
+            else MobileApp()
         }
     }
 }

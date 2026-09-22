@@ -7,7 +7,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -25,6 +27,8 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.fincast.tv.Graph
 import com.fincast.tv.data.repo.AspectMode
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Observable handle on the player, shared by the TV and touch layouts. */
 @Stable
@@ -41,6 +45,14 @@ class Playback(val engine: PlayerEngine) {
         val player = engine.player ?: return
         if (player.isPlaying) player.pause() else player.play()
     }
+
+    fun stop() {
+        engine.player?.apply {
+            stop()
+            clearMediaItems()
+        }
+        isPlaying = false
+    }
 }
 
 /**
@@ -48,17 +60,25 @@ class Playback(val engine: PlayerEngine) {
  * builds it once, tunes whenever the channel changes, and pauses while the app
  * is in the background.
  *
+ * @param resumeLast pick up the last channel on launch. A TV should; a phone
+ *   should not start audio on its own with the picture hidden.
  * @param autoTuneFirst start the first channel when there is nothing to resume.
  *   Right for a TV, where a black screen with no visible controls reads as
  *   broken; wrong for a phone, where the channel list is right there.
  */
 @Composable
-fun rememberPlayback(viewModel: PlayerViewModel, autoTuneFirst: Boolean): Playback {
+fun rememberPlayback(
+    viewModel: PlayerViewModel,
+    autoTuneFirst: Boolean,
+    resumeLast: Boolean = true,
+): Playback {
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val pending by viewModel.pendingUrl.collectAsStateWithLifecycle()
     val playback = remember { Playback(PlayerEngine(context.applicationContext)) }
     val engine = playback.engine
+    val scope = rememberCoroutineScope()
+    var retries by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         val settings = Graph.settings.current()
@@ -70,6 +90,7 @@ fun rememberPlayback(viewModel: PlayerViewModel, autoTuneFirst: Boolean): Playba
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 viewModel.setBuffering(playbackState == Player.STATE_BUFFERING)
+                if (playbackState == Player.STATE_READY) retries = 0
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -77,10 +98,21 @@ fun rememberPlayback(viewModel: PlayerViewModel, autoTuneFirst: Boolean): Playba
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                // Live streams hiccup; a couple of quiet retries beats showing an
+                // error for a stall that would have cleared itself.
+                if (retries < 3 && isRecoverable(error)) {
+                    retries++
+                    val attempt = retries
+                    scope.launch {
+                        delay(1_500L * attempt)
+                        engine.player?.apply { prepare(); play() }
+                    }
+                    return
+                }
                 viewModel.reportError(friendlyError(error))
             }
         })
-        playback.resuming = settings.resumeOnStart && settings.lastChannelId != 0L
+        playback.resuming = resumeLast && settings.resumeOnStart && settings.lastChannelId != 0L
         playback.ready = true
 
         // Come back to the last channel, the way a TV does.
@@ -114,8 +146,14 @@ fun rememberPlayback(viewModel: PlayerViewModel, autoTuneFirst: Boolean): Playba
 
     LaunchedEffect(playback.ready, state.currentChannel?.id) {
         if (!playback.ready) return@LaunchedEffect
-        val channel = state.currentChannel ?: return@LaunchedEffect
-        if (state.catchup == null) engine.play(channel.url, channel.referrer)
+        val channel = state.currentChannel
+        when {
+            channel == null -> playback.stop()
+            state.catchup == null -> {
+                retries = 0
+                engine.play(channel.url, channel.referrer)
+            }
+        }
     }
 
     // Catch-up and return-to-live push an explicit URL instead.
@@ -138,7 +176,7 @@ fun rememberPlayback(viewModel: PlayerViewModel, autoTuneFirst: Boolean): Playba
     // Transient messages fade on their own; nothing here needs acknowledging.
     LaunchedEffect(state.statusMessage) {
         if (state.statusMessage != null) {
-            kotlinx.coroutines.delay(6_000)
+            delay(6_000)
             viewModel.clearStatus()
         }
     }
@@ -172,6 +210,15 @@ fun VideoSurface(playback: Playback, aspectMode: AspectMode, modifier: Modifier 
         onRelease = { it.player = null },
         modifier = modifier,
     )
+}
+
+private fun isRecoverable(error: PlaybackException): Boolean = when (error.errorCode) {
+    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+    PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+    PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW,
+    PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED -> true
+    else -> false
 }
 
 fun friendlyError(error: PlaybackException): String = when (error.errorCode) {

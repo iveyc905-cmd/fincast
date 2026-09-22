@@ -89,6 +89,26 @@ interface ChannelDao {
         now: Long,
     ): Flow<List<ChannelWithNow>>
 
+    /** Recently watched channels, most recent first, shaped like the main list. */
+    @Transaction
+    @Query(
+        """
+        SELECT c.*,
+               (f.channelId IS NOT NULL) AS isFavorite,
+               (SELECT p.title   FROM programmes p WHERE p.tvgId = c.tvgId AND p.startMs <= :now AND p.stopMs > :now LIMIT 1) AS nowTitle,
+               (SELECT p.startMs FROM programmes p WHERE p.tvgId = c.tvgId AND p.startMs <= :now AND p.stopMs > :now LIMIT 1) AS nowStartMs,
+               (SELECT p.stopMs  FROM programmes p WHERE p.tvgId = c.tvgId AND p.startMs <= :now AND p.stopMs > :now LIMIT 1) AS nowStopMs,
+               (SELECT p.title   FROM programmes p WHERE p.tvgId = c.tvgId AND p.startMs > :now ORDER BY p.startMs LIMIT 1) AS nextTitle
+        FROM watch_state w
+        JOIN channels c ON c.id = w.channelId
+        LEFT JOIN favorites f ON f.channelId = c.id
+        WHERE c.playlistId = :playlistId AND c.hidden = 0
+        ORDER BY w.lastWatchedMs DESC
+        LIMIT :limit
+        """
+    )
+    fun observeRecent(playlistId: Long, now: Long, limit: Int): Flow<List<ChannelWithNow>>
+
     @Query("SELECT * FROM channels WHERE playlistId = :playlistId AND hidden = 0 ORDER BY ordinal")
     suspend fun channelsFor(playlistId: Long): List<ChannelEntity>
 

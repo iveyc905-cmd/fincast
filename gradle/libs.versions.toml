@@ -47,6 +47,7 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+androidx-palette = { module = "androidx.palette:palette-ktx", version = "1.0.0" }
 work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 

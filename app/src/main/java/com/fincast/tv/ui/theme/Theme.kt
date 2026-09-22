@@ -14,14 +14,14 @@ import androidx.compose.ui.unit.sp
  * video, and a single saturated accent that reads clearly from three metres away.
  */
 private val FincastColors = darkColorScheme(
-    primary = Color(0xFF4DA3FF),
-    onPrimary = Color(0xFF00121F),
-    secondary = Color(0xFFFFB74D),
+    primary = Color(0xFFFF6A3D),
+    onPrimary = Color(0xFF1B0A04),
+    secondary = Color(0xFFFFC46B),
     background = Color(0xFF05070A),
     onBackground = Color(0xFFE9EEF5),
-    surface = Color(0xFF10141B),
+    surface = Color(0xFF121418),
     onSurface = Color(0xFFE9EEF5),
-    surfaceVariant = Color(0xFF1B2230),
+    surfaceVariant = Color(0xFF1E2128),
     onSurfaceVariant = Color(0xFFA9B4C4),
     outline = Color(0xFF33405A),
     error = Color(0xFFFF6B6B),
@@ -32,7 +32,7 @@ object Scrim {
     val panel = Color(0xE60B0F16)
     val panelDeep = Color(0xF20A0D13)
     val row = Color(0x1AFFFFFF)
-    val rowSelected = Color(0xFF1E4E82)
+    val rowSelected = Color(0xFF5A2A1A)
     val bar = Color(0xCC05070A)
 }
 

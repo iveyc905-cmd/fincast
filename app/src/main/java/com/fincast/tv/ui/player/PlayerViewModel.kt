@@ -20,7 +20,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -48,12 +51,17 @@ data class PlayerUiState(
     val aspectMode: AspectMode = AspectMode.FIT,
     val catchup: CatchupSession? = null,
     val showChannelNumbers: Boolean = true,
+    /** Every channel in the playlist, unfiltered: what the home screen sections are built from. */
+    val allChannels: List<ChannelWithNow> = emptyList(),
+    val recent: List<ChannelWithNow> = emptyList(),
+    val searchQuery: String = "",
+    val searchResults: List<ChannelWithNow> = emptyList(),
 ) {
     val currentIndex: Int
         get() = channels.indexOfFirst { it.channel.id == currentChannel?.id }
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class PlayerViewModel(app: Application) : AndroidViewModel(app) {
 
     private val playlists = Graph.playlists
@@ -77,6 +85,27 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
         combine(filter, clock) { f, now -> f to now }
             .flatMapLatest { (f, now) ->
                 playlists.observeChannels(f.playlistId, f.group, f.favoritesOnly, f.query, now)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val playlistId = MutableStateFlow(0L)
+    private val searchQuery = MutableStateFlow("")
+
+    private val allChannelStream: StateFlow<List<ChannelWithNow>> =
+        combine(playlistId, clock) { id, now -> id to now }
+            .flatMapLatest { (id, now) -> playlists.observeChannels(id, null, false, "", now) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val recentStream: StateFlow<List<ChannelWithNow>> =
+        combine(playlistId, clock) { id, now -> id to now }
+            .flatMapLatest { (id, now) -> playlists.observeRecent(id, now = now) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val searchStream: StateFlow<List<ChannelWithNow>> =
+        combine(playlistId, searchQuery.debounce(150)) { id, q -> id to q }
+            .flatMapLatest { (id, q) ->
+                if (q.isBlank()) flowOf(emptyList())
+                else playlists.observeChannels(id, null, false, q, System.currentTimeMillis())
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -107,6 +136,15 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         viewModelScope.launch {
+            allChannelStream.collect { local.value = local.value.copy(allChannels = it) }
+        }
+        viewModelScope.launch {
+            recentStream.collect { local.value = local.value.copy(recent = it) }
+        }
+        viewModelScope.launch {
+            searchStream.collect { local.value = local.value.copy(searchResults = it) }
+        }
+        viewModelScope.launch {
             filter
                 .flatMapLatest { playlists.observeGroups(it.playlistId) }
                 .collect { groups -> local.value = local.value.copy(groups = groups) }
@@ -127,6 +165,7 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     fun selectPlaylist(id: Long) {
         local.value = local.value.copy(activePlaylistId = id, selectedGroup = null)
         filter.value = filter.value.copy(playlistId = id, group = null)
+        playlistId.value = id
         viewModelScope.launch { settings.setActivePlaylist(id) }
     }
 
@@ -143,6 +182,31 @@ class PlayerViewModel(app: Application) : AndroidViewModel(app) {
     fun setQuery(query: String) {
         local.value = local.value.copy(query = query)
         filter.value = filter.value.copy(query = query)
+    }
+
+    fun setSearchQuery(query: String) {
+        searchQuery.value = query
+        local.value = local.value.copy(searchQuery = query)
+    }
+
+    /**
+     * Tunes a channel and narrows the zap list to its category, so "next
+     * channel" from the player walks the group the user picked it from.
+     */
+    fun tuneInGroup(channel: ChannelEntity) {
+        if (local.value.favoritesOnly || local.value.selectedGroup != channel.groupName) {
+            setFavoritesOnly(false)
+            setGroup(channel.groupName)
+        }
+        tune(channel)
+    }
+
+    /** Drops the current channel; the player host stops the stream. */
+    fun stop() {
+        local.value = local.value.copy(
+            currentChannel = null, catchup = null,
+            nowProgramme = null, nextProgramme = null, isBuffering = false,
+        )
     }
 
     fun openOverlay(overlay: Overlay) {
