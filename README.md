@@ -1,4 +1,4 @@
-# OpenTV
+# Fincast
 
 An original Android TV IPTV player — M3U and Xtream Codes playlists, XMLTV
 guide, D-pad-first UI, ExoPlayer under the hood.
@@ -65,7 +65,7 @@ builds the debug APK, attaches it to a release tagged `latest`, then runs the
 unit tests. On a public repo that gives a fixed download URL for the TV:
 
 ```
-https://github.com/<you>/<repo>/releases/download/latest/opentv-debug.apk
+https://github.com/<you>/<repo>/releases/download/latest/fincast-debug.apk
 ```
 
 ### Locally

@@ -38,13 +38,13 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Name the APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk opentv-debug.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk fincast-debug.apk
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: opentv-debug-apk
-          path: opentv-debug.apk
+          name: fincast-debug-apk
+          path: fincast-debug.apk
           retention-days: 30
 
       - name: Publish to the "latest" release
@@ -57,7 +57,7 @@ jobs:
             Install on a TV with the Downloader app using the APK link below.
           prerelease: true
           make_latest: true
-          files: opentv-debug.apk
+          files: fincast-debug.apk
 
       # Runs after publishing, so a failing test flags a problem without
       # holding back an APK you might want to try anyway.

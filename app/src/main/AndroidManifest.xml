@@ -11,7 +11,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
-        android:name=".OpenTvApp"
+        android:name=".FincastApp"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:banner="@drawable/app_banner"
@@ -19,7 +19,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.OpenTV">
+        android:theme="@style/Theme.Fincast">
 
         <activity
             android:name=".MainActivity"
@@ -29,7 +29,7 @@
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.OpenTV">
+            android:theme="@style/Theme.Fincast">
 
             <!-- Phones/tablets -->
             <intent-filter>

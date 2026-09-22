@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.opentv.tv"
+    namespace = "com.fincast.tv"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.opentv.tv"
+        applicationId = "com.fincast.tv"
         minSdk = 21
         targetSdk = 34          // 34 keeps foreground-service rules simpler on TV
         versionCode = 1

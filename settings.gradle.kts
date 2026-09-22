@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OpenTV"
+rootProject.name = "Fincast"
 include(":app")
