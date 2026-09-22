@@ -229,7 +229,7 @@ private fun VideoArea(
     var controlsVisible by remember { mutableStateOf(true) }
     // Bumped on every control tap so the auto-hide timer restarts.
     var interactions by remember { mutableIntStateOf(0) }
-    val touched = { interactions++ }
+    val touched: () -> Unit = { interactions++ }
 
     LaunchedEffect(controlsVisible, interactions, playback.isPlaying) {
         if (controlsVisible && playback.isPlaying) {
