@@ -1,0 +1,360 @@
+package app.ember.tv.ui.setup
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.ember.tv.Graph
+import app.ember.tv.data.model.SourceKind
+import app.ember.tv.sync.SyncScheduler
+import app.ember.tv.ui.components.VSpace
+import app.ember.tv.ui.theme.Scrim
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+private enum class AddMode { XTREAM, M3U }
+
+/**
+ * Playlist management and preferences.
+ *
+ * This is the one screen where text entry is unavoidable, so it uses ordinary
+ * focus traversal and standard text fields — the TV IME handles the rest.
+ */
+@Composable
+fun SetupScreen(onDone: () -> Unit, embedded: Boolean = false) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val playlists by Graph.playlists.observePlaylists().collectAsStateWithLifecycle(emptyList())
+    val settings by Graph.settings.settings.collectAsStateWithLifecycle(
+        initialValue = app.ember.tv.data.repo.AppSettings()
+    )
+
+    var mode by remember { mutableStateOf(AddMode.XTREAM) }
+    var name by remember { mutableStateOf("") }
+    var portal by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var m3uUrl by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+
+    // Phones get a narrow gutter; a TV needs overscan-safe margins.
+    val compact = LocalConfiguration.current.screenWidthDp < 600
+    val gutter = if (compact) 16.dp else 48.dp
+
+    fun addPlaylist() {
+        busy = true
+        message = null
+        scope.launch {
+            val result = runCatching {
+                when (mode) {
+                    AddMode.XTREAM -> Graph.playlists.addXtream(
+                        name = name,
+                        portalUrl = portal,
+                        username = username,
+                        password = password,
+                        userAgent = settings.userAgent,
+                    )
+                    AddMode.M3U -> Graph.playlists.addM3uUrl(
+                        name = name,
+                        url = m3uUrl,
+                        userAgent = settings.userAgent,
+                    )
+                }
+            }
+            busy = false
+            result.fold(
+                onSuccess = { count ->
+                    message = count.describe()
+                    name = ""; portal = ""; username = ""; password = ""; m3uUrl = ""
+                    SyncScheduler.refreshNow(context)
+                },
+                onFailure = { message = it.message ?: "Could not add the playlist" },
+            )
+        }
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            // Embedded under a page title, the host has already cleared the
+            // status bar and tab bar; standalone, this screen owns the window.
+            .then(if (embedded) Modifier else Modifier.systemBarsPadding())
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = gutter, vertical = if (compact) 16.dp else 32.dp)
+    ) {
+        Text("Playlists", style = MaterialTheme.typography.titleLarge)
+        VSpace(20)
+
+        playlists.forEach { playlist ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Scrim.row)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(playlist.name, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = buildString {
+                            append(
+                                when (playlist.kind) {
+                                    SourceKind.XTREAM -> "Xtream"
+                                    SourceKind.M3U_URL -> "M3U"
+                                    SourceKind.M3U_FILE -> "File"
+                                }
+                            )
+                            append("  ·  ")
+                            append(
+                                if (playlist.lastSyncMs == 0L) "never synced"
+                                else "synced " + SimpleDateFormat("d MMM HH:mm", Locale.getDefault())
+                                    .format(Date(playlist.lastSyncMs))
+                            )
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = {
+                    scope.launch {
+                        busy = true
+                        val result = Graph.playlists.refresh(playlist.id)
+                        busy = false
+                        message = result.fold(
+                            onSuccess = { "${playlist.name}: ${it.describe()}" },
+                            onFailure = { it.message },
+                        )
+                    }
+                }) { Text("Refresh") }
+                TextButton(onClick = {
+                    scope.launch { Graph.playlists.delete(playlist.id) }
+                }) { Text("Remove") }
+            }
+            VSpace(8)
+        }
+
+        VSpace(24)
+        Text("Add a playlist", style = MaterialTheme.typography.titleMedium)
+        VSpace(12)
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            FilterChip(
+                selected = mode == AddMode.XTREAM,
+                onClick = { mode = AddMode.XTREAM },
+                label = { Text("Xtream Codes login") },
+            )
+            FilterChip(
+                selected = mode == AddMode.M3U,
+                onClick = { mode = AddMode.M3U },
+                label = { Text("M3U URL") },
+            )
+        }
+        VSpace(16)
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Name (optional)") },
+            singleLine = true,
+            modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+        )
+        VSpace(12)
+
+        when (mode) {
+            AddMode.XTREAM -> {
+                OutlinedTextField(
+                    value = portal,
+                    onValueChange = { portal = it },
+                    label = { Text("Portal URL, e.g. http://example.com:8080") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+                )
+                VSpace(12)
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    singleLine = true,
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+                )
+                VSpace(12)
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+                )
+            }
+
+            AddMode.M3U -> {
+                OutlinedTextField(
+                    value = m3uUrl,
+                    onValueChange = { m3uUrl = it },
+                    label = { Text("Playlist URL (http/https)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                    ),
+                    modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+                )
+            }
+        }
+
+        VSpace(16)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = { addPlaylist() },
+                enabled = !busy && when (mode) {
+                    AddMode.XTREAM -> portal.isNotBlank() && username.isNotBlank()
+                    AddMode.M3U -> m3uUrl.isNotBlank()
+                },
+            ) { Text("Add and load") }
+
+            if (busy) {
+                Box(Modifier.padding(start = 16.dp)) {
+                    CircularProgressIndicator(strokeWidth = 2.dp)
+                }
+            }
+            message?.let {
+                Text(
+                    text = it,
+                    modifier = Modifier.padding(start = 16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        VSpace(32)
+        Text("Preferences", style = MaterialTheme.typography.titleMedium)
+        VSpace(12)
+
+        SettingSwitch(
+            label = "Resume last channel on start",
+            checked = settings.resumeOnStart,
+            onChange = { scope.launch { Graph.settings.setResumeOnStart(it) } },
+        )
+        SettingSwitch(
+            label = "Show channel numbers",
+            checked = settings.showChannelNumbers,
+            onChange = { scope.launch { Graph.settings.setShowChannelNumbers(it) } },
+        )
+        SettingSwitch(
+            label = "Tunneled video decoding (turn off if the picture is black)",
+            checked = settings.tunnelingEnabled,
+            onChange = { scope.launch { Graph.settings.setTunneling(it) } },
+        )
+
+        VSpace(12)
+        // Edited locally and written on commit — round-tripping every keystroke
+        // through DataStore makes the field fight the cursor.
+        var userAgentDraft by remember(settings.userAgent) { mutableStateOf(settings.userAgent) }
+        OutlinedTextField(
+            value = userAgentDraft,
+            onValueChange = { userAgentDraft = it },
+            label = { Text("User agent sent to the provider") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = { scope.launch { Graph.settings.setUserAgent(userAgentDraft) } }
+            ),
+            modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+        )
+        TextButton(
+            onClick = { scope.launch { Graph.settings.setUserAgent(userAgentDraft) } },
+            enabled = userAgentDraft != settings.userAgent,
+        ) { Text("Save user agent") }
+
+        VSpace(12)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf(10, 30, 60).forEach { seconds ->
+                FilterChip(
+                    selected = settings.bufferSeconds == seconds,
+                    onClick = { scope.launch { Graph.settings.setBufferSeconds(seconds) } },
+                    label = { Text("${seconds}s buffer") },
+                )
+            }
+        }
+
+        VSpace(28)
+        // Stacked, so both fit on a phone.
+        Column(
+            Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (!embedded) {
+                Button(
+                    onClick = onDone,
+                    enabled = playlists.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Start watching") }
+            }
+            OutlinedButton(
+                onClick = { SyncScheduler.refreshNow(context) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Refresh everything now") }
+        }
+        VSpace(24)
+    }
+}
+
+@Composable
+private fun SettingSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .widthIn(max = 760.dp)
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked, onCheckedChange = onChange)
+    }
+}

@@ -11,7 +11,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
-        android:name=".FincastApp"
+        android:name=".EmberApp"
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
         android:banner="@drawable/app_banner"
@@ -19,7 +19,12 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.Fincast">
+        android:theme="@style/Theme.Ember">
+
+        <!-- Tells Google Cast which receiver to launch; see cast/Casting.kt. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="app.ember.tv.cast.CastOptionsProvider" />
 
         <activity
             android:name=".MainActivity"
@@ -29,7 +34,7 @@
             android:windowSoftInputMode="adjustResize"
             android:supportsPictureInPicture="true"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.Fincast">
+            android:theme="@style/Theme.Ember">
 
             <!-- Phones/tablets -->
             <intent-filter>

@@ -1,4 +1,4 @@
-# Fincast
+# Ember
 
 An original Android TV IPTV player — M3U and Xtream Codes playlists, XMLTV
 guide, D-pad-first UI, ExoPlayer under the hood.
@@ -53,19 +53,29 @@ subscribe to. The app is a player, the same way VLC is.
 - Tunneled decoding toggle (fixes black screens on some cheap boxes)
 - Human-readable playback errors, including "provider is at its connection limit"
 
-**Not implemented** (deliberately out of scope for a first cut): recording/DVR,
-VOD and series browsing, multi-view, Chromecast, parental PIN.
+**Movies and series**
+- Xtream movie and series catalogues, and films/episodes detected in M3U playlists
+- Poster grids by category, detail pages, season picker
+- Resume where you stopped, "Continue watching", next-episode autoplay
+
+**Casting**
+- Google Cast to Chromecast and Google TV, with the phone as the remote
+- Xtream live channels are cast as HLS, which a Chromecast can play
+- Streams that need custom headers, or servers without CORS, may refuse to cast
+
+**Not implemented yet:** recording/DVR, multi-view, DLNA casting, parental PIN.
 
 ## Build
 
 ### In the cloud (no local toolchain needed)
 
 Every push to `main` runs `.github/workflows/build.yml` on GitHub Actions. It
-builds the debug APK, attaches it to a release tagged `latest`, then runs the
-unit tests. On a public repo that gives a fixed download URL for the TV:
+builds a signed, R8-optimised release APK, attaches it to a release tagged
+`latest`, then runs the unit tests. Signing uses the `EMBER_KEYSTORE_B64`
+repository secret; without it the build compiles but publishes nothing. On a public repo that gives a fixed download URL for the TV:
 
 ```
-https://github.com/iveyc905-cmd/fincast/releases/download/latest/fincast-debug.apk
+https://github.com/iveyc905-cmd/fincast/releases/download/latest/ember.apk
 ```
 
 ### Locally

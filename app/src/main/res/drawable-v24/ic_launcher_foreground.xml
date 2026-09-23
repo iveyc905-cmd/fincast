@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ember mark: a flame with a play triangle cut through it (even-odd fill, so the
+  background shows through the triangle). Art stays inside the adaptive-icon
+  safe zone, a 66dp circle centred in the 108dp canvas.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Soft glow behind the flame. -->
+    <path android:pathData="M54,62m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="62"
+                android:gradientRadius="30">
+                <item android:offset="0" android:color="#66FF7A3D" />
+                <item android:offset="1" android:color="#00FF7A3D" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M54,22 C62.5,34.5 75,46 75,62 A21,21 0 0 1 33,62 C33,46 45.5,34.5 54,22 Z M48,52 L64.5,62.5 L48,73 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="22"
+                android:endX="54"
+                android:endY="83">
+                <item android:offset="0" android:color="#FFFFD27A" />
+                <item android:offset="0.45" android:color="#FFFF8A45" />
+                <item android:offset="1" android:color="#FFE8452B" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

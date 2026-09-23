@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android TV launcher banner (320x180): the flame mark plus a geometric
+  EMBER wordmark drawn as strokes, so no font file is needed.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+
+    <path android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="80"
+                android:centerY="96"
+                android:gradientRadius="220">
+                <item android:offset="0" android:color="#FF2E1911" />
+                <item android:offset="1" android:color="#FF0C0807" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <group
+        android:translateX="7.8"
+        android:translateY="22.4"
+        android:scaleX="1.3"
+        android:scaleY="1.3">
+        <path
+            android:fillType="evenOdd"
+            android:pathData="M54,22 C62.5,34.5 75,46 75,62 A21,21 0 0 1 33,62 C33,46 45.5,34.5 54,22 Z M48,52 L64.5,62.5 L48,73 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="54"
+                    android:startY="22"
+                    android:endX="54"
+                    android:endY="83">
+                    <item android:offset="0" android:color="#FFFFD27A" />
+                    <item android:offset="0.45" android:color="#FFFF8A45" />
+                    <item android:offset="1" android:color="#FFE8452B" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+
+    <!-- E M B E R, cap height 40, stroke 7 -->
+    <path
+        android:strokeColor="#FFF5EDE6"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="
+            M160,70 H138 V110 H160 M138,90 H156
+            M172,110 V70 L187,94 L202,70 V110
+            M214,110 V70 H227 A10,10 0 0 1 227,90 H214 M214,90 H229 A10,10 0 0 1 229,110 H214
+            M270,70 H248 V110 H270 M248,90 H266
+            M282,110 V70 H294 A10,10 0 0 1 294,90 H282 M291,90 L304,110" />
+</vector>

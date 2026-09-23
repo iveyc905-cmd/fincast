@@ -20,3 +20,5 @@ keystore.properties
 # OS noise
 .DS_Store
 Thumbs.db
+*.p12
+*.base64.txt

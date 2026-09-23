@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Fincast"
+rootProject.name = "Ember"
 include(":app")

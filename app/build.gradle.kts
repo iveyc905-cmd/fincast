@@ -6,16 +6,33 @@ plugins {
 }
 
 android {
-    namespace = "com.fincast.tv"
+    namespace = "app.ember.tv"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.fincast.tv"
+        applicationId = "app.ember.tv"
         minSdk = 21
         targetSdk = 34          // 34 keeps foreground-service rules simpler on TV
-        versionCode = 3
-        versionName = "0.3.0"
+        // CI numbers each build so every published APK is a clean upgrade.
+        versionCode = 100 + (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0)
+        versionName = "0.4." + (System.getenv("GITHUB_RUN_NUMBER") ?: "dev")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+    }
+
+    // The release key comes from CI (a GitHub secret decoded to a file). Without
+    // it, release builds fall back to the debug key so local builds still work,
+    // but such an APK cannot update one installed from the published link.
+    val keystorePath = System.getenv("EMBER_KEYSTORE_PATH")
+    signingConfigs {
+        if (keystorePath != null && file(keystorePath).exists()) {
+            create("ember") {
+                storeFile = file(keystorePath)
+                storeType = "pkcs12"
+                storePassword = "ember-release"
+                keyAlias = "ember"
+                keyPassword = "ember-release"
+            }
+        }
     }
 
     buildTypes {
@@ -23,9 +40,12 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
+            // R8 matters for more than size: Compose runs noticeably smoother
+            // once optimised, which is most of what makes a phone UI feel good.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("ember") ?: signingConfigs.getByName("debug")
         }
     }
 
@@ -71,6 +91,9 @@ dependencies {
     implementation(libs.media3.ui)
     implementation(libs.media3.datasource.okhttp)
     implementation(libs.media3.session)
+    implementation(libs.media3.cast)
+    implementation(libs.androidx.mediarouter)
+    implementation(libs.androidx.appcompat)
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

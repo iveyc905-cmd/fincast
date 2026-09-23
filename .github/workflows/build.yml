@@ -2,7 +2,7 @@ name: Build APK
 
 # Builds on every push to main and on demand from the Actions tab.
 # Each successful build replaces the APK on the "latest" release, which gives
-# the TV one fixed download URL to point the Downloader app at.
+# phones and TVs one fixed download URL.
 on:
   push:
     branches: [main]
@@ -34,30 +34,50 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug --stacktrace
+      # The signing key lives only in the EMBER_KEYSTORE_B64 secret. Every
+      # published build must be signed with it, or it cannot install over the
+      # previous one. Without it the build still compiles (so code errors show
+      # up), but nothing is published and the run is marked failed at the end.
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.EMBER_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::EMBER_KEYSTORE_B64 is not set; building, but not publishing."
+            echo "HAS_KEY=false" >> "$GITHUB_ENV"
+          else
+            echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/ember-release.p12"
+            echo "EMBER_KEYSTORE_PATH=$RUNNER_TEMP/ember-release.p12" >> "$GITHUB_ENV"
+            echo "HAS_KEY=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build release APK
+        run: gradle :app:assembleRelease --stacktrace
 
       - name: Name the APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk fincast-debug.apk
+        if: env.HAS_KEY == 'true'
+        run: cp app/build/outputs/apk/release/app-release.apk ember.apk
 
       - name: Upload build artifact
+        if: env.HAS_KEY == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: fincast-debug-apk
-          path: fincast-debug.apk
+          name: ember-apk
+          path: ember.apk
           retention-days: 30
 
       - name: Publish to the "latest" release
+        if: env.HAS_KEY == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Latest build
           body: |
-            Automatic build of ${{ github.sha }}.
-            Install on a TV with the Downloader app using the APK link below.
+            Automatic build ${{ github.run_number }} of ${{ github.sha }}.
+            Download ember.apk below. It installs over any earlier Ember build.
           prerelease: true
           make_latest: true
-          files: fincast-debug.apk
+          files: ember.apk
 
       # Runs after publishing, so a failing test flags a problem without
       # holding back an APK you might want to try anyway.
@@ -70,3 +90,9 @@ jobs:
         with:
           name: test-report
           path: app/build/reports/tests/
+
+      - name: Refuse to pass without the signing key
+        if: env.HAS_KEY != 'true'
+        run: |
+          echo "::error::Compiled fine, but EMBER_KEYSTORE_B64 is missing, so nothing was published."
+          exit 1

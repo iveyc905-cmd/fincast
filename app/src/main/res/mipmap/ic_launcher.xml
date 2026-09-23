@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher icon for Android 5-7, which predate adaptive icons. Solid fills only:
+  gradients in vector drawables need Android 7, and this must also work on 5.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF1C110D"
+        android:pathData="M54,4 A50,50 0 1 1 53.99,4 Z" />
+    <path
+        android:fillColor="#FFFF7A3D"
+        android:fillType="evenOdd"
+        android:pathData="M54,22 C62.5,34.5 75,46 75,62 A21,21 0 0 1 33,62 C33,46 45.5,34.5 54,22 Z M48,52 L64.5,62.5 L48,73 Z" />
+</vector>
